@@ -1,8 +1,10 @@
 package internalserver
 
 import (
+	"fullerite/collector"
 	"fullerite/config"
 	"fullerite/handler"
+	"fullerite/metric"
 
 	"encoding/json"
 	"fmt"
@@ -21,23 +23,28 @@ const (
 
 // InternalServer will collect from each handler the status and return it over HTTP
 type InternalServer struct {
-	log      *l.Entry
-	handlers *[]handler.Handler
-	port     int
-	path     string
+	log        *l.Entry
+	handlers   *[]handler.Handler
+	collectors *[]collector.Collector
+	port       int
+	path       string
 }
 
 // ResponseFormat is the structure of the response from an http request
 type ResponseFormat struct {
-	Memory   handler.InternalMetrics
-	Handlers map[string]handler.InternalMetrics
+	Memory     handler.InternalMetrics
+	Handlers   map[string]metric.InternalMetrics
+	Collectors map[string]metric.InternalMetrics
 }
 
 // New createse a new internal server instance
-func New(cfg config.Config, handlers *[]handler.Handler) *InternalServer {
+func New(cfg config.Config,
+	handlers *[]handler.Handler,
+	collectors *[]collector.Collector) *InternalServer {
 	srv := new(InternalServer)
 	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver"})
 	srv.handlers = handlers
+	srv.collectors = collectors
 	srv.configure(cfg.InternalServerConfig)
 	return srv
 }
@@ -116,8 +123,14 @@ func (srv InternalServer) buildResponse() *[]byte {
 		handlerStats[inst.Name()] = inst.InternalMetrics()
 	}
 
+	collectorStats := make(map[string]handler.InternalMetrics)
+	for _, inst := range *srv.collectors {
+		collectorStats[inst.Name()] = inst.InternalMetrics()
+	}
+
 	rsp := ResponseFormat{}
 	rsp.Handlers = handlerStats
+	rsp.Collectors = collectorStats
 	rsp.Memory = *memoryStats
 
 	asString, err := json.Marshal(rsp)

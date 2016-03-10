@@ -118,7 +118,7 @@ func start(ctx *cli.Context) {
 	collectors := startCollectors(c)
 	handlers := startHandlers(c)
 
-	internalServer := internalserver.New(c, &handlers)
+	internalServer := internalserver.New(c, &handlers, &collectors)
 	go internalServer.Run()
 
 	readFromCollectors(collectors, handlers)

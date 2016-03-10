@@ -3,6 +3,7 @@ package internalserver
 import (
 	"fullerite/config"
 	"fullerite/handler"
+	"fullerite/metric"
 
 	"encoding/json"
 	"fmt"
@@ -31,7 +32,7 @@ func (h testHandler) Name() string {
 }
 
 func buildTestHandler(name string, counters, gauges map[string]float64) handler.Handler {
-	testMetrics := handler.NewInternalMetrics()
+	testMetrics := metric.NewInternalMetrics()
 	for name, value := range counters {
 		testMetrics.Counters[name] = value
 	}
