@@ -136,14 +136,14 @@ func (col baseCollector) String() string {
 // InternalMetrics returns internal metrics of collector
 func (col *baseCollector) InternalMetrics() metric.InternalMetrics {
 	counters := map[string]float64{
-		"metricCounter": float64(base.metricCounter),
+		"metricCounter": float64(col.metricCounter),
 	}
 
 	gauges := map[string]float64{}
 
 	return metric.InternalMetrics{
-		CumulativeCounters: counters,
-		Gauges:             gauges,
-		Dimensions:         map[string]string{collector: col.Name()},
+		Counters:   counters,
+		Gauges:     gauges,
+		Dimensions: map[string]string{"collector": col.Name()},
 	}
 }

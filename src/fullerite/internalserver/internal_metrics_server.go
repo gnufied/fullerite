@@ -2,7 +2,6 @@ package internalserver
 
 import (
 	"fullerite/config"
-	"fullerite/handler"
 	"fullerite/metric"
 
 	"encoding/json"
@@ -33,7 +32,7 @@ type InternalStatFunc func() (stats []metric.InternalMetrics)
 
 // ResponseFormat is the structure of the response from an http request
 type ResponseFormat struct {
-	Memory     handler.InternalMetrics
+	Memory     metric.InternalMetrics
 	Handlers   map[string]metric.InternalMetrics
 	Collectors map[string]metric.InternalMetrics
 }
@@ -104,8 +103,6 @@ func (srv *InternalServer) configure(cfgMap map[string]interface{}) {
 //	}
 //
 func (srv InternalServer) handleInternalMetricsRequest(writer http.ResponseWriter, req *http.Request) {
-	srv.log.Debug("Starting to handle request for internal metrics, checking ", len(*srv.handlers), " handlers")
-
 	rspString := string(*srv.buildResponse())
 
 	srv.log.Debug("Finished building response: ", rspString)
@@ -117,22 +114,17 @@ func (srv InternalServer) buildResponse() *[]byte {
 	memoryStats := getMemoryStats()
 	rsp := ResponseFormat{}
 	rsp.Memory = *memoryStats
-	for statFunc := range statFuncs {
+	handlerStats := make(map[string]metric.InternalMetrics)
+	collectorStats := make(map[string]metric.InternalMetrics)
+	for _, statFunc := range srv.statFuncs {
 		stats := statFunc()
-		for stat := range stats {
-			if col, ok := stat["collector"]; ok {
-
+		for _, stat := range stats {
+			if handler, ok := stat.Dimensions["handler"]; ok {
+				handlerStats[handler] = stat
+			} else if col, ok := stat.Dimensions["collector"]; ok {
+				collectorStats[col] = stat
 			}
 		}
-	}
-	handlerStats := make(map[string]handler.InternalMetrics)
-	for _, inst := range *srv.handlers {
-		handlerStats[inst.Name()] = inst.InternalMetrics()
-	}
-
-	collectorStats := make(map[string]handler.InternalMetrics)
-	for _, inst := range *srv.collectors {
-		collectorStats[inst.Name()] = inst.InternalMetrics()
 	}
 
 	rsp.Handlers = handlerStats
@@ -189,7 +181,7 @@ func getMemoryStats() *metric.InternalMetrics {
 		"LastGC":       float64(m.LastGC),
 	}
 
-	rsp := handler.InternalMetrics{
+	rsp := metric.InternalMetrics{
 		Counters:   counters,
 		Gauges:     gauges,
 		Dimensions: map[string]string{},

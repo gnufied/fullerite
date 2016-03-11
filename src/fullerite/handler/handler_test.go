@@ -224,7 +224,7 @@ func TestInternalMetrics(t *testing.T) {
 	base.emissionTimes.PushBack(timing)
 
 	results := base.InternalMetrics()
-	expected := InternalMetrics{
+	expected := metric.InternalMetrics{
 		Counters: map[string]float64{
 			"metricsDropped": 100,
 			"metricsSent":    2,
@@ -236,6 +236,7 @@ func TestInternalMetrics(t *testing.T) {
 			"intervalLength":        4,
 			"maxEmissionTiming":     10,
 		},
+		Dimensions: map[string]string{"handler": ""},
 	}
 	assert.Equal(t, expected, results)
 }
@@ -243,7 +244,7 @@ func TestInternalMetrics(t *testing.T) {
 func TestInternalMetricsWithNan(t *testing.T) {
 	base := BaseHandler{}
 
-	expected := InternalMetrics{
+	expected := metric.InternalMetrics{
 		Counters: map[string]float64{
 			"metricsDropped": 0,
 			"metricsSent":    0,
@@ -255,6 +256,7 @@ func TestInternalMetricsWithNan(t *testing.T) {
 			"emissionsInWindow": 0,
 			"intervalLength":    0,
 		},
+		Dimensions: map[string]string{"handler": ""},
 	}
 	im := base.InternalMetrics()
 	assert.Equal(t, expected, im)
