@@ -2,7 +2,6 @@ package collector
 
 import (
 	"fullerite/metric"
-	"sync/atomic"
 
 	"bufio"
 	"os"
@@ -63,7 +62,7 @@ func (c *CPUInfo) Collect() {
 	metric.Value = value
 	metric.AddDimension("model", model)
 	c.Channel() <- metric
-	atomic.AddUint64(&c.metricCounter, 1)
+	c.metricCounter = 1
 	c.log.Debug(metric)
 }
 

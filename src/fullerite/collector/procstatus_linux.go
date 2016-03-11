@@ -4,7 +4,6 @@ package collector
 
 import (
 	"fullerite/metric"
-	"sync/atomic"
 
 	"strconv"
 	"strings"
@@ -19,7 +18,7 @@ func (ps *ProcStatus) Collect() {
 		ps.Channel() <- m
 		counter++
 	}
-	atomic.AddUint64(&ps.metricCounter, uint64(counter))
+	ps.metricCounter = uint64(counter)
 }
 
 func procStatusPoint(name string, value float64, dimensions map[string]string, metricType string) (m metric.Metric) {
