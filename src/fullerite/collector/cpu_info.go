@@ -53,7 +53,7 @@ func (c *CPUInfo) Configure(configMap map[string]interface{}) {
 }
 
 // Collect Emits the no of CPUs and ModelName
-func (c CPUInfo) Collect() {
+func (c *CPUInfo) Collect() {
 	value, model, err := c.getCPUInfo()
 	if err != nil {
 		c.log.Error("Error while collecting metrics: ", err)
