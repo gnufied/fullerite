@@ -30,7 +30,7 @@ type Collector interface {
 	SetCollectorType(string)
 	CanonicalName() string
 	SetCanonicalName(string)
-	InternalMetrics() metric.InternalMetrics
+	InternalMetrics() map[string]metric.InternalMetrics
 }
 
 var collectorConstructs map[string]func(chan metric.Metric, int, *l.Entry) Collector
@@ -134,16 +134,16 @@ func (col baseCollector) String() string {
 }
 
 // InternalMetrics returns internal metrics of collector
-func (col *baseCollector) InternalMetrics() metric.InternalMetrics {
+func (col *baseCollector) InternalMetrics() map[string]metric.InternalMetrics {
 	counters := map[string]float64{
 		"metricCounter": float64(col.metricCounter),
 	}
 
 	gauges := map[string]float64{}
 
-	return metric.InternalMetrics{
-		Counters:   counters,
-		Gauges:     gauges,
-		Dimensions: map[string]string{"collector": col.Name()},
+	m := metric.InternalMetrics{
+		Counters: counters,
+		Gauges:   gauges,
 	}
+	return map[string]metric.InternalMetrics{col.Name(): m}
 }

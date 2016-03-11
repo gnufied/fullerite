@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fullerite/metric"
+	"sync/atomic"
 
 	"strconv"
 	"strings"
@@ -12,10 +13,13 @@ import (
 )
 
 // Collect produces some random test metrics.
-func (ps ProcStatus) Collect() {
+func (ps *ProcStatus) Collect() {
+	counter := 0
 	for _, m := range ps.procStatusMetrics() {
 		ps.Channel() <- m
+		counter++
 	}
+	atomic.AddUint64(&ps.metricCounter, uint64(counter))
 }
 
 func procStatusPoint(name string, value float64, dimensions map[string]string, metricType string) (m metric.Metric) {

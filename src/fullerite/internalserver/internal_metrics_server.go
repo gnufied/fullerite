@@ -21,14 +21,15 @@ const (
 
 // InternalServer will collect from each handler the status and return it over HTTP
 type InternalServer struct {
-	log       *l.Entry
-	statFuncs []InternalStatFunc
-	port      int
-	path      string
+	log               *l.Entry
+	handlerStatFunc   InternalStatFunc
+	collectorStatFunc InternalStatFunc
+	port              int
+	path              string
 }
 
 // InternalStatFunc can be used to extract metrics
-type InternalStatFunc func() (stats []metric.InternalMetrics)
+type InternalStatFunc func() (stats map[string]metric.InternalMetrics)
 
 // ResponseFormat is the structure of the response from an http request
 type ResponseFormat struct {
@@ -38,10 +39,11 @@ type ResponseFormat struct {
 }
 
 // New createse a new internal server instance
-func New(cfg config.Config, statsFunc ...InternalStatFunc) *InternalServer {
+func New(cfg config.Config, h InternalStatFunc, c InternalStatFunc) *InternalServer {
 	srv := new(InternalServer)
 	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver"})
-	srv.statFuncs = statsFunc
+	srv.handlerStatFunc = h
+	srv.collectorStatFunc = c
 	srv.configure(cfg.InternalServerConfig)
 	return srv
 }
@@ -114,22 +116,8 @@ func (srv InternalServer) buildResponse() *[]byte {
 	memoryStats := getMemoryStats()
 	rsp := ResponseFormat{}
 	rsp.Memory = *memoryStats
-	handlerStats := make(map[string]metric.InternalMetrics)
-	collectorStats := make(map[string]metric.InternalMetrics)
-	for _, statFunc := range srv.statFuncs {
-		stats := statFunc()
-		for _, stat := range stats {
-			if handler, ok := stat.Dimensions["handler"]; ok {
-				handlerStats[handler] = stat
-			} else if col, ok := stat.Dimensions["collector"]; ok {
-				collectorStats[col] = stat
-			}
-		}
-	}
-
-	rsp.Handlers = handlerStats
-	rsp.Collectors = collectorStats
-
+	rsp.Handlers = srv.handlerStatFunc()
+	rsp.Collectors = srv.collectorStatFunc()
 	asString, err := json.Marshal(rsp)
 	if err != nil {
 		srv.log.Warn("Failed to marshal response ", rsp, " because of error ", err)
@@ -182,9 +170,8 @@ func getMemoryStats() *metric.InternalMetrics {
 	}
 
 	rsp := metric.InternalMetrics{
-		Counters:   counters,
-		Gauges:     gauges,
-		Dimensions: map[string]string{},
+		Counters: counters,
+		Gauges:   gauges,
 	}
 	return &rsp
 }

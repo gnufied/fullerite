@@ -236,7 +236,6 @@ func TestInternalMetrics(t *testing.T) {
 			"intervalLength":        4,
 			"maxEmissionTiming":     10,
 		},
-		Dimensions: map[string]string{"handler": ""},
 	}
 	assert.Equal(t, expected, results)
 }
@@ -256,7 +255,6 @@ func TestInternalMetricsWithNan(t *testing.T) {
 			"emissionsInWindow": 0,
 			"intervalLength":    0,
 		},
-		Dimensions: map[string]string{"handler": ""},
 	}
 	im := base.InternalMetrics()
 	assert.Equal(t, expected, im)

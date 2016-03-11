@@ -121,7 +121,9 @@ func start(ctx *cli.Context) {
 	collectors := startCollectors(c)
 	handlers := startHandlers(c)
 
-	internalServer := internalserver.New(c, handleStatFunc(handlers, collectors))
+	internalServer := internalserver.New(c,
+		handlerStatFunc(handlers),
+		collectorStatFunc(collectors))
 	go internalServer.Run()
 
 	readFromCollectors(collectors, handlers)
@@ -132,15 +134,23 @@ func start(ctx *cli.Context) {
 	<-quit
 }
 
-func handleStatFunc(handlers []handler.Handler,
-	collectors []collector.Collector) internalserver.InternalStatFunc {
-	return func() []metric.InternalMetrics {
-		stats := []metric.InternalMetrics{}
+func handlerStatFunc(handlers []handler.Handler) internalserver.InternalStatFunc {
+	return func() map[string]metric.InternalMetrics {
+		stats := map[string]metric.InternalMetrics{}
 		for _, inst := range handlers {
-			stats = append(stats, inst.InternalMetrics())
+			stats[inst.Name()] = inst.InternalMetrics()
 		}
-		for _, col := range collectors {
-			stats = append(stats, col.InternalMetrics())
+		return stats
+	}
+}
+
+func collectorStatFunc(collectors []collector.Collector) internalserver.InternalStatFunc {
+	return func() map[string]metric.InternalMetrics {
+		stats := map[string]metric.InternalMetrics{}
+		for _, inst := range collectors {
+			for k, v := range inst.InternalMetrics() {
+				stats[k] = v
+			}
 		}
 		return stats
 	}
