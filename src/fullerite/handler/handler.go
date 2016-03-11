@@ -329,8 +329,9 @@ func (base BaseHandler) InternalMetrics() metric.InternalMetrics {
 	}
 
 	return metric.InternalMetrics{
-		Counters: counters,
-		Gauges:   gauges,
+		Counters:   counters,
+		Gauges:     gauges,
+		Dimensions: map[string]string{handler: base.Name()},
 	}
 }
 

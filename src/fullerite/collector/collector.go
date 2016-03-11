@@ -144,5 +144,6 @@ func (col *baseCollector) InternalMetrics() metric.InternalMetrics {
 	return metric.InternalMetrics{
 		CumulativeCounters: counters,
 		Gauges:             gauges,
+		Dimensions:         map[string]string{collector: col.Name()},
 	}
 }

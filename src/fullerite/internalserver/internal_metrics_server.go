@@ -1,7 +1,6 @@
 package internalserver
 
 import (
-	"fullerite/collector"
 	"fullerite/config"
 	"fullerite/handler"
 	"fullerite/metric"
@@ -23,12 +22,14 @@ const (
 
 // InternalServer will collect from each handler the status and return it over HTTP
 type InternalServer struct {
-	log        *l.Entry
-	handlers   *[]handler.Handler
-	collectors *[]collector.Collector
-	port       int
-	path       string
+	log       *l.Entry
+	statFuncs []InternalStatFunc
+	port      int
+	path      string
 }
+
+// InternalStatFunc can be used to extract metrics
+type InternalStatFunc func() (stats []metric.InternalMetrics)
 
 // ResponseFormat is the structure of the response from an http request
 type ResponseFormat struct {
@@ -38,13 +39,10 @@ type ResponseFormat struct {
 }
 
 // New createse a new internal server instance
-func New(cfg config.Config,
-	handlers *[]handler.Handler,
-	collectors *[]collector.Collector) *InternalServer {
+func New(cfg config.Config, statsFunc ...InternalStatFunc) *InternalServer {
 	srv := new(InternalServer)
 	srv.log = l.WithFields(l.Fields{"app": "fullerite", "pkg": "internalserver"})
-	srv.handlers = handlers
-	srv.collectors = collectors
+	srv.statFuncs = statsFunc
 	srv.configure(cfg.InternalServerConfig)
 	return srv
 }
@@ -117,7 +115,16 @@ func (srv InternalServer) handleInternalMetricsRequest(writer http.ResponseWrite
 // responsible for querying each handler and serializing the total response
 func (srv InternalServer) buildResponse() *[]byte {
 	memoryStats := getMemoryStats()
+	rsp := ResponseFormat{}
+	rsp.Memory = *memoryStats
+	for statFunc := range statFuncs {
+		stats := statFunc()
+		for stat := range stats {
+			if col, ok := stat["collector"]; ok {
 
+			}
+		}
+	}
 	handlerStats := make(map[string]handler.InternalMetrics)
 	for _, inst := range *srv.handlers {
 		handlerStats[inst.Name()] = inst.InternalMetrics()
@@ -128,10 +135,8 @@ func (srv InternalServer) buildResponse() *[]byte {
 		collectorStats[inst.Name()] = inst.InternalMetrics()
 	}
 
-	rsp := ResponseFormat{}
 	rsp.Handlers = handlerStats
 	rsp.Collectors = collectorStats
-	rsp.Memory = *memoryStats
 
 	asString, err := json.Marshal(rsp)
 	if err != nil {
@@ -149,7 +154,7 @@ func memoryStats() *runtime.MemStats {
 }
 
 // converts the memory stats to a map. The response is in the form like this: {counters: [], gauges: []}
-func getMemoryStats() *handler.InternalMetrics {
+func getMemoryStats() *metric.InternalMetrics {
 	m := memoryStats()
 
 	counters := map[string]float64{
@@ -185,8 +190,9 @@ func getMemoryStats() *handler.InternalMetrics {
 	}
 
 	rsp := handler.InternalMetrics{
-		Counters: counters,
-		Gauges:   gauges,
+		Counters:   counters,
+		Gauges:     gauges,
+		Dimensions: map[string]string{},
 	}
 	return &rsp
 }
